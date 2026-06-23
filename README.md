@@ -1,109 +1,145 @@
 # LevelUp
 
-> Turn your real life into an RPG. Main quests, side quests, daily missions, XP, ranks, and an optional AI Quest Forge.
+> Turn your real life into an RPG. Main quests, side quests, daily missions, XP, ranks, and an optional AI Quest Forge — built once in Kotlin + Compose, running on **Android** and **iOS**.
 
-LevelUp is an Android app, written in Kotlin + Jetpack Compose, that gamifies your goals
-and habits. It is local-first: your data stays on your device unless you export it to a
-JSON backup file you control.
+## Architecture
+
+LevelUp is a **Compose Multiplatform** app. ~95% of the code (UI, data, business logic) lives in `:shared/commonMain`. Each platform contributes a tiny host:
+
+```
+┌──────────────────┐     ┌──────────────────┐
+│  androidApp/     │     │  iosApp/         │
+│  MainActivity    │     │  iOSApp.swift    │
+│  + BackupBridge  │     │  + BackupBridge  │
+└────────┬─────────┘     └────────┬─────────┘
+         │                        │
+         └──── :shared ───────────┘
+                 │
+   ┌─────────────┴───────────────┐
+   │ commonMain (Compose UI,     │
+   │ Room-style data via         │
+   │ SQLDelight, Ktor, prefs,    │
+   │ domain logic, AI forge)     │
+   └─────────────────────────────┘
+```
 
 ## Features
 
-- **Main quests** — long-arc life goals (e.g. *Get fit*, *Learn Japanese*).
-- **Side quests** — one-off bounties (e.g. *Run a 5K*, *Read a book*).
-- **Daily missions** — recurring habits that reset every day and build a streak.
-- **XP + Levels (L1–L99)** with a non-linear curve so each level feels earned.
-- **Hunter Ranks** — `E → D → C → B → A → S`, unlocked at level milestones.
-- **Stats** — `STR`, `INT`, `DIS`, `VIT`, `SOC` grow as you complete themed quests.
-- **Achievements** — first blood, streak milestones, rank promotions, etc.
-- **Quest Forge** — type a life goal and the app suggests quests for you.
-  - **Offline mode (default)**: deterministic template generator. No network.
-  - **OpenAI mode (opt-in)**: paste your own API key, model is configurable.
-- **Local-first storage** with `Room` and JSON `export` / `import` backup.
+- **Main quests** — long-arc life goals.
+- **Side quests** — one-off bounties.
+- **Daily missions** — recurring habits with streak tracking.
+- **XP curve + Levels (L1–L99)** with non-linear progression.
+- **Hunter Ranks** — `E → D → C → B → A → S`.
+- **Stats** — `STR`, `INT`, `DIS`, `VIT`, `SOC` grow with themed quests.
+- **Achievements** — first blood, streak milestones, rank promotions.
+- **Quest Forge** — turn a goal into a set of quests.
+  - Offline template generator (default, no network).
+  - Optional **OpenAI BYO-key** mode (stored on-device).
+- **Local-first storage** with cross-platform JSON export / import.
 
 ## Tech stack
 
-| Layer       | Choice |
-| ----------- | ------ |
-| UI          | Jetpack Compose + Material 3 |
-| Navigation  | `androidx.navigation:navigation-compose` |
-| Persistence | Room (SQLite) |
-| Preferences | DataStore Preferences |
-| Serialization | `kotlinx.serialization-json` |
-| AI client | OkHttp + OpenAI Chat Completions (optional, BYO key) |
-| Language    | Kotlin `2.0.20`, Android Gradle Plugin `8.7.0`, minSdk 26, targetSdk 34 |
-
-## Build and run
-
-Easiest path is **Android Studio (Iguana or newer)**.
-
-1. Install **Android Studio** with the Android SDK 34 platform.
-2. Open this folder. Studio will offer to download Gradle and create the Gradle wrapper.
-3. Connect an Android device (or start an emulator with API level ≥ 26).
-4. Run the `app` configuration.
-
-If you prefer the command line, install a Gradle 8.7+ distribution and run:
-
-```bash
-gradle wrapper                  # one-time: generate gradlew + wrapper jar
-./gradlew :app:installDebug     # build and install on a connected device
-```
+| Layer       | Library                                           |
+| ----------- | ------------------------------------------------- |
+| UI          | Compose Multiplatform 1.7 + Material 3            |
+| Persistence | SQLDelight 2.x (SQLite on both platforms)         |
+| Preferences | `multiplatform-settings`                          |
+| HTTP        | Ktor (OkHttp engine on Android, Darwin on iOS)    |
+| Date/time   | `kotlinx-datetime`                                |
+| Serialization | `kotlinx-serialization-json`                    |
+| Language    | Kotlin `2.0.21`, AGP `8.7.0`, minSdk 26 / iOS 16+ |
 
 ## Project layout
 
 ```
-app/
-├── build.gradle.kts
-└── src/
-    ├── main/
-    │   ├── AndroidManifest.xml
-    │   ├── java/com/levelup/app/
-    │   │   ├── LevelUpApplication.kt   # process-wide DI bootstrap
-    │   │   ├── MainActivity.kt
-    │   │   ├── ai/
-    │   │   │   └── QuestSuggester.kt   # OpenAI + offline template generator
-    │   │   ├── data/
-    │   │   │   ├── *.Entity.kt         # Room entities
-    │   │   │   ├── Daos.kt
-    │   │   │   ├── LevelUpDatabase.kt
-    │   │   │   ├── LevelUpRepository.kt # completion transaction
-    │   │   │   ├── LevelUpContainer.kt  # manual DI
-    │   │   │   ├── backup/Backup.kt     # JSON export/import
-    │   │   │   └── prefs/UserPreferences.kt
-    │   │   ├── domain/
-    │   │   │   ├── Progression.kt      # XP curve, level + rank math
-    │   │   │   ├── DailyReset.kt       # streak helpers
-    │   │   │   └── Rewards.kt          # achievement evaluator
-    │   │   └── ui/
-    │   │       ├── LevelUpApp.kt       # nav host + bottom bar
-    │   │       ├── LevelUpViewModel.kt
-    │   │       ├── components/         # shared visual atoms
-    │   │       ├── screens/            # Dashboard, Missions, Detail, Create, Forge, Profile, Settings
-    │   │       └── theme/Theme.kt
-    │   └── res/                        # colors, strings, icons
-    └── test/java/com/levelup/app/domain/ # unit tests for Progression + DailyReset
+LevelUp/
+├── build.gradle.kts            # root: declares plugin versions
+├── settings.gradle.kts         # includes :shared, :androidApp
+├── gradle.properties
+├── shared/                     # 95% of the code lives here
+│   ├── build.gradle.kts
+│   └── src/
+│       ├── commonMain/
+│       │   ├── sqldelight/.../LevelUpDatabase.sq   # schema + queries
+│       │   └── kotlin/com/levelup/app/
+│       │       ├── AppContainer.kt                  # manual DI
+│       │       ├── ai/QuestSuggester.kt
+│       │       ├── data/{Models,LevelUpRepository}.kt
+│       │       ├── data/backup/Backup.kt
+│       │       ├── data/db/DriverFactory.kt         # expect
+│       │       ├── data/prefs/UserPreferences.kt
+│       │       ├── domain/{Progression,DailyReset,Rewards}.kt
+│       │       ├── platform/{BackupBridge,Toaster}.kt
+│       │       └── ui/                              # full Compose UI
+│       ├── androidMain/                             # SQLDelight Android driver
+│       ├── iosMain/                                 # SQLDelight Native driver + MainViewController
+│       └── commonTest/                              # pure-Kotlin unit tests
+├── androidApp/                 # thin Android host
+│   ├── build.gradle.kts
+│   └── src/main/
+│       ├── AndroidManifest.xml
+│       └── java/com/levelup/app/android/
+│           ├── LevelUpApplication.kt
+│           ├── MainActivity.kt
+│           └── AndroidBackupBridge.kt
+└── iosApp/                     # thin iOS host (Xcode project added per-machine)
+    ├── README.md               # how to attach the Xcode project
+    ├── iosApp/
+    │   ├── iOSApp.swift
+    │   ├── IOSBackupBridge.swift
+    │   └── Info.plist
+    └── Configuration/Config.xcconfig
 ```
+
+## Build & run
+
+### Prerequisites
+
+- **Android Studio Iguana+** (or IntelliJ IDEA with the KMP plugin).
+- **JDK 17** (set in Android Studio's Gradle JDK settings).
+- **Xcode 16+** (iOS only, macOS only).
+- **Kotlin Multiplatform Mobile** plugin in Android Studio (recommended).
+
+### Android
+
+```bash
+./gradlew :androidApp:installDebug
+```
+
+Or open the project in Android Studio and run the `androidApp` configuration on an emulator or device (API 26+).
+
+### iOS
+
+The iOS Xcode project is intentionally **not committed** — its `project.pbxproj` contains absolute, per-machine paths. See `iosApp/README.md` for the one-time setup:
+
+1. Build the shared framework with `./gradlew :shared:linkDebugFrameworkIosSimulatorArm64`.
+2. Create a new SwiftUI app in Xcode under `iosApp/`, drop in `iOSApp.swift` and `IOSBackupBridge.swift`.
+3. Add a Run Script phase that calls `./gradlew :shared:embedAndSignAppleFrameworkForXcode`.
+4. Link `shared.framework` from `shared/build/xcode-frameworks/...`.
+5. Run on an iPhone simulator (iOS 16+).
+
+The fast path: install the **Kotlin Multiplatform** plugin in Android Studio and let it generate the iOS Xcode project for you.
 
 ## AI Quest Forge
 
-By default the Forge runs offline and uses a keyword-driven template generator. To use a real model:
+Default is offline: a keyword-driven template generator. To use a real model:
 
 1. Open **System → AI Quest Generator** and pick **OpenAI**.
-2. Paste an `sk-...` key. It is stored in DataStore on your device.
+2. Paste an `sk-...` key. It is stored in `multiplatform-settings` on the device.
 3. Optionally change the model (default `gpt-4o-mini`).
 
-If the API call fails for any reason (no network, bad key, rate limit), the Forge falls back to offline suggestions automatically. The app **never** sends data anywhere unless AI mode is on and you tap *Forge*.
+If the API call fails (no network, bad key, rate limit), the Forge falls back to offline suggestions automatically. The app **never** sends data anywhere unless AI mode is on and you tap *Forge*.
 
 ## Backup
 
-`System → Backup → Export` writes a `levelup-backup.json` file using the Android Storage Access Framework — you choose where it goes. *Import* reads any `levelup-backup.json` you point it at and restores the snapshot, replacing the current data.
+`System → Backup → Export` writes a `levelup-backup.json` file using each platform's native file picker (Storage Access Framework on Android, `UIDocumentPicker` on iOS). *Import* reads any compatible `levelup-backup.json` back into the app.
 
-## Roadmap (post-v0.1)
+## Roadmap
 
-- Notifications + daily quest reminders
-- Mission categories / tags
+- Notifications + daily quest reminders (per-platform)
 - Charts for XP-per-day and stat trends
-- Optional cloud sync
-- Widgets for the daily mission list
+- Cloud sync (optional)
+- Home-screen widgets (Android Glance, iOS WidgetKit)
 
 ## Disclaimer
 

@@ -1,0 +1,6 @@
+// iosApp/Configuration/Config.xcconfig
+// Edit BUNDLE_ID + TEAM_ID once before opening the project in Xcode.
+
+BUNDLE_ID = com.levelup.app
+TEAM_ID =
+APP_NAME = LevelUp

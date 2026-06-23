@@ -1,0 +1,149 @@
+-- LevelUp schema.
+-- SQLDelight generates type-safe Kotlin from this file.
+
+-- ===== Tables ==============================================================
+
+CREATE TABLE Mission (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    type TEXT NOT NULL,         -- MissionType (MAIN | SIDE | DAILY)
+    stat TEXT NOT NULL,         -- StatType  (STRENGTH | INTELLIGENCE | ...)
+    difficulty TEXT NOT NULL,   -- Difficulty
+    xpReward INTEGER NOT NULL,
+    statReward INTEGER NOT NULL,
+    parentId INTEGER,
+    createdAt INTEGER NOT NULL,
+    completed INTEGER NOT NULL DEFAULT 0,
+    completedAt INTEGER,
+    archived INTEGER NOT NULL DEFAULT 0,
+    lastCompletedDate TEXT,     -- yyyy-MM-dd, used for DAILY
+    currentStreak INTEGER NOT NULL DEFAULT 0,
+    bestStreak INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE Completion (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    missionId INTEGER NOT NULL,
+    missionTitle TEXT NOT NULL,
+    stat TEXT NOT NULL,
+    xpAwarded INTEGER NOT NULL,
+    statAwarded INTEGER NOT NULL,
+    completedAt INTEGER NOT NULL
+);
+
+CREATE TABLE Profile (
+    id INTEGER NOT NULL PRIMARY KEY,
+    hunterName TEXT NOT NULL DEFAULT 'Hunter',
+    totalXp INTEGER NOT NULL DEFAULT 0,
+    strength INTEGER NOT NULL DEFAULT 0,
+    intelligence INTEGER NOT NULL DEFAULT 0,
+    discipline INTEGER NOT NULL DEFAULT 0,
+    vitality INTEGER NOT NULL DEFAULT 0,
+    social INTEGER NOT NULL DEFAULT 0,
+    lifetimeMissionsCompleted INTEGER NOT NULL DEFAULT 0,
+    createdAt INTEGER NOT NULL
+);
+
+CREATE TABLE Achievement (
+    code TEXT NOT NULL PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    unlockedAt INTEGER NOT NULL
+);
+
+-- ===== Mission queries =====================================================
+
+selectAllMissions:
+SELECT * FROM Mission WHERE archived = 0 ORDER BY createdAt DESC;
+
+selectMissionsByType:
+SELECT * FROM Mission WHERE archived = 0 AND type = ? ORDER BY createdAt DESC;
+
+selectMissionById:
+SELECT * FROM Mission WHERE id = ?;
+
+selectAllMissionsRaw:
+SELECT * FROM Mission;
+
+insertMission:
+INSERT INTO Mission(
+    title, description, type, stat, difficulty, xpReward, statReward,
+    parentId, createdAt, completed, completedAt, archived,
+    lastCompletedDate, currentStreak, bestStreak
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+upsertMissionWithId:
+INSERT OR REPLACE INTO Mission(
+    id, title, description, type, stat, difficulty, xpReward, statReward,
+    parentId, createdAt, completed, completedAt, archived,
+    lastCompletedDate, currentStreak, bestStreak
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateMission:
+UPDATE Mission SET
+    title = ?, description = ?, type = ?, stat = ?, difficulty = ?,
+    xpReward = ?, statReward = ?, parentId = ?, completed = ?,
+    completedAt = ?, archived = ?, lastCompletedDate = ?,
+    currentStreak = ?, bestStreak = ?
+WHERE id = ?;
+
+archiveMission:
+UPDATE Mission SET archived = 1 WHERE id = ?;
+
+deleteMission:
+DELETE FROM Mission WHERE id = ?;
+
+clearMissions:
+DELETE FROM Mission;
+
+lastInsertedId:
+SELECT last_insert_rowid();
+
+-- ===== Completion queries ==================================================
+
+selectRecentCompletions:
+SELECT * FROM Completion ORDER BY completedAt DESC LIMIT ?;
+
+selectAllCompletions:
+SELECT * FROM Completion;
+
+insertCompletion:
+INSERT INTO Completion(missionId, missionTitle, stat, xpAwarded, statAwarded, completedAt)
+VALUES (?, ?, ?, ?, ?, ?);
+
+clearCompletions:
+DELETE FROM Completion;
+
+-- ===== Profile queries =====================================================
+
+selectProfile:
+SELECT * FROM Profile WHERE id = 1;
+
+upsertProfile:
+INSERT OR REPLACE INTO Profile(
+    id, hunterName, totalXp, strength, intelligence, discipline,
+    vitality, social, lifetimeMissionsCompleted, createdAt
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+clearProfile:
+DELETE FROM Profile;
+
+-- ===== Achievement queries =================================================
+
+selectAllAchievements:
+SELECT * FROM Achievement ORDER BY unlockedAt DESC;
+
+selectAllAchievementsRaw:
+SELECT * FROM Achievement;
+
+insertAchievementIfNew:
+INSERT OR IGNORE INTO Achievement(code, title, description, unlockedAt)
+VALUES (?, ?, ?, ?);
+
+upsertAchievement:
+INSERT OR REPLACE INTO Achievement(code, title, description, unlockedAt)
+VALUES (?, ?, ?, ?);
+
+clearAchievements:
+DELETE FROM Achievement;

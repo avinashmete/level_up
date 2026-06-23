@@ -21,4 +21,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "LevelUp"
-include(":app")
+include(":shared")
+include(":androidApp")
