@@ -1,6 +1,3 @@
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
     id("com.android.library")
@@ -11,13 +8,12 @@ plugins {
 }
 
 kotlin {
-    @OptIn(ExperimentalKotlinGradlePluginApi::class)
-    compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_17)
-        freeCompilerArgs.add("-Xexpect-actual-classes")
-    }
-
     androidTarget {
+        compilations.all {
+            kotlinOptions {
+                jvmTarget = "17"
+            }
+        }
         publishLibraryVariants("release")
     }
 
@@ -29,6 +25,15 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "shared"
             isStatic = true
+        }
+    }
+
+    // Allow `expect class` without per-platform `actual class` warnings.
+    targets.all {
+        compilations.all {
+            kotlinOptions {
+                freeCompilerArgs += "-Xexpect-actual-classes"
+            }
         }
     }
 
