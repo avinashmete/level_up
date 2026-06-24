@@ -35,7 +35,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10'
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          cache-disabled: true
 
       - name: Shared module · common unit tests
         run: gradle --no-daemon :shared:testDebugUnitTest --stacktrace
@@ -79,15 +79,15 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.konan
-          key: konan-${{ runner.os }}-${{ hashFiles('**/*.gradle.kts', 'gradle.properties') }}
+          key: konan-v2-${{ runner.os }}-${{ hashFiles('**/*.gradle.kts', 'gradle.properties') }}
           restore-keys: |
-            konan-${{ runner.os }}-
+            konan-v2-${{ runner.os }}-
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10'
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          cache-disabled: true
 
       - name: Link iOS Simulator framework (arm64)
         run: gradle --no-daemon :shared:linkDebugFrameworkIosSimulatorArm64 --stacktrace
